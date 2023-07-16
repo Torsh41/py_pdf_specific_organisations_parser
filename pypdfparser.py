@@ -7,6 +7,7 @@ def font_index_is_switched(font_index, font_index_prev, newline):
         return ""
 class OrganisationObject:
     re_empty_str = re.compile(r"^[ \t\n\s0-9,.-]*$") # match if "empty" string
+    re_extract_info = re.compile(r".*?(\([0-9]{3}\)\s[0-9]{3}-[0-9]{2}-[0-9]{2}[\s,]*)+")
     # settings variables
     header_pos = 9.5 # x coordinate of text relative to each page
     body_pos = 9.0
@@ -22,6 +23,16 @@ class OrganisationObject:
         return OrganisationObject.re_empty_str.match(string) is not None
     def to_str(self):
         return f"Name:\n{self.name}\nDescr:\n{self.description}\n"
+    def to_csv(self, delim):
+        lines = self.description.split("\n")
+        lines = [line for line in lines if line != ""]
+        description = "".join([line for line in lines if line[0] != '\t'])
+        info = delim.join([" " + line[2:] for line in lines if line[0] == '\t'])
+        phones = delim.join(
+                [num.group().replace("|", ";")
+                for num in OrganisationObject.re_extract_info.finditer(info)])
+        urls = OrganisationObject.re_extract_info.split(info)[-1]
+        return f"{self.name}{delim}{description}{delim}{phones}{urls}\n
 def visitor_body_fonts(text, cm, tm, font_dict, font_size):
     # do once, create list of fonts
     global font_list, font_count
@@ -91,4 +102,5 @@ help="int: page number from pdf file at which the organisations are printed (1st
         page.extract_text(visitor_text=visitor_body_text2)
 
     for org in organisation_list:
-        print(org.to_str())   
+#        print(org.to_str())   
+        print(org.to_csv("|"), end="")
